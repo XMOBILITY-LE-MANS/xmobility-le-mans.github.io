@@ -156,8 +156,8 @@
 -->
 <script>
 window.SHEET = {
-  profil:  "",
-  boutons: ""
+  profil:  "https://docs.google.com/spreadsheets/d/e/2PACX-1vRg3vrWOOeca86NVImT72IGZlX8U6VaYgSB29o0bcHWu5MptSZcf8oIr5F7a6qcQ8yaSk94_3Aqei_j/pub?gid=717932782&single=true&output=csv",
+  boutons: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRg3vrWOOeca86NVImT72IGZlX8U6VaYgSB29o0bcHWu5MptSZcf8oIr5F7a6qcQ8yaSk94_3Aqei_j/pub?gid=950069110&single=true&output=csv"
 };
 </script>
 <!-- Contenu de secours (affiché si le Sheet est injoignable) -->
@@ -395,10 +395,13 @@ function show(){ render(C); document.body.classList.remove('loading'); }
   if (!ok(S.profil) && !ok(S.boutons)){ show(); return; }
   const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000));
   try{
-    const [p, b] = await Promise.race([Promise.all([
-      ok(S.profil) ? getCSV(S.profil) : null,
-      ok(S.boutons) ? getCSV(S.boutons) : null]), timeout]);
-    if (p) applyProfil(p); if (b) applyBoutons(b);
+    const tabs = await Promise.race([Promise.all([S.profil, S.boutons].filter(ok).map(getCSV)), timeout]);
+    // reconnaît chaque onglet par ses en-têtes, quel que soit l'ordre des liens
+    tabs.forEach(rows => {
+      const h = (rows[0]||[]).map(norm);
+      if (h.includes('champ')) applyProfil(rows);
+      else if (h.includes('titre')) applyBoutons(rows);
+    });
   }catch(e){ console.warn('Google Sheet indisponible, contenu de secours affiché :', e.message); }
   show();
 })();
